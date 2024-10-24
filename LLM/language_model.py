@@ -6,6 +6,7 @@ from transformers import (
     TextIteratorStreamer,
 )
 import torch
+import ollama
 
 from LLM.chat import Chat
 from baseHandler import BaseHandler
@@ -81,35 +82,22 @@ class LanguageModelHandler(BaseHandler):
 
         dummy_input_text = "Repeat the word 'home'."
         dummy_chat = [{"role": self.user_role, "content": dummy_input_text}]
-        warmup_gen_kwargs = {
-            "min_new_tokens": self.gen_kwargs["min_new_tokens"],
-            "max_new_tokens": self.gen_kwargs["max_new_tokens"],
-            **self.gen_kwargs,
-        }
-
+        
         n_steps = 2
-
-        if self.device == "cuda":
-            start_event = torch.cuda.Event(enable_timing=True)
-            end_event = torch.cuda.Event(enable_timing=True)
-            torch.cuda.synchronize()
-            start_event.record()
+        generated_text = ""
 
         for _ in range(n_steps):
-            thread = Thread(
-                target=self.pipe, args=(dummy_chat,), kwargs=warmup_gen_kwargs
+            # Simulating a warm-up for ollama's chat API
+            stream = ollama.chat(
+                model='llama3.1:8b',
+                messages=dummy_chat,
+                stream=True,
             )
-            thread.start()
-            for _ in self.streamer:
-                pass
-
-        if self.device == "cuda":
-            end_event.record()
-            torch.cuda.synchronize()
-
-            logger.info(
-                f"{self.__class__.__name__}:  warmed up! time: {start_event.elapsed_time(end_event) * 1e-3:.3f} s"
-            )
+            for new_text in stream:
+                new_text = new_text['message']['content']
+                generated_text += new_text
+                
+        logger.info(f"{self.__class__.__name__} warmed up with dummy text: {generated_text}")
 
     def process(self, prompt):
         logger.debug("infering language model...")
@@ -121,27 +109,22 @@ class LanguageModelHandler(BaseHandler):
                 prompt = f"Please reply to my message in {WHISPER_LANGUAGE_TO_LLM_LANGUAGE[language_code]}. " + prompt
 
         self.chat.append({"role": self.user_role, "content": prompt})
-        thread = Thread(
-            target=self.pipe, args=(self.chat.to_list(),), kwargs=self.gen_kwargs
+
+        stream = ollama.chat(
+            model='llama3.1:8b',
+            messages=self.chat.to_list(),
+            stream=True,
         )
-        thread.start()
-        if self.device == "mps":
-            generated_text = ""
-            for new_text in self.streamer:
-                generated_text += new_text
-            printable_text = generated_text
-            torch.mps.empty_cache()
-        else:
-            generated_text, printable_text = "", ""
-            for new_text in self.streamer:
-                generated_text += new_text
-                printable_text += new_text
-                sentences = sent_tokenize(printable_text)
-                if len(sentences) > 1:
-                    yield (sentences[0], language_code)
-                    printable_text = new_text
+        generated_text, printable_text = "", ""
+        for new_text in stream:
+            new_text = new_text['message']['content']
+            generated_text += new_text
+            printable_text += new_text
+            sentences = sent_tokenize(printable_text)
+            if len(sentences) > 1:
+                yield (sentences[0], language_code)
+                printable_text = new_text
 
         self.chat.append({"role": "assistant", "content": generated_text})
 
-        # don't forget last sentence
         yield (printable_text, language_code)

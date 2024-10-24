@@ -41,8 +41,7 @@ class ParlerTTSHandlerArguments:
     )
     description: str = field(
         default=(
-            "A female speaker with a slightly low-pitched voice delivers her words quite expressively, in a very confined sounding environment with clear audio quality. "
-            "She speaks very fast."
+            "A female speaker with a slightly low-pitched voice delivers her words quite expressively, in a very confined sounding environment with clear audio quality."
         ),
         metadata={
             "help": "Description of the speaker's voice and speaking style to guide the TTS model."

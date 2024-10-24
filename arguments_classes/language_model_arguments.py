@@ -34,7 +34,11 @@ class LanguageModelHandlerArguments:
         },
     )
     init_chat_prompt: str = field(
-        default="You are a helpful and friendly AI assistant. You are polite, respectful, and aim to provide concise responses of less than 20 words.",
+        default="""
+            You are a technical interviewer(Lambda) conducting a coding interview.Your task is to assess the candidate's skills in programming and problem-solving. Start by asking the candidate for their name and a brief introduction about their experience.
+            Then ask specific technical questions, beginning with easy concepts
+            Based on their answers, tailor your follow-up questions to delve deeper into their knowledge.
+        """,
         metadata={
             "help": "The initial chat prompt to establish context for the language model. Default is 'You are a helpful AI assistant.'"
         },
@@ -64,7 +68,7 @@ class LanguageModelHandlerArguments:
         },
     )
     chat_size: int = field(
-        default=2,
+        default=100,
         metadata={
             "help": "Number of interactions assitant-user to keep for the chat. None for no limitations."
         },
