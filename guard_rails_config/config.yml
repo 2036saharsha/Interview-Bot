@@ -1,0 +1,7 @@
+models:
+  - type: main
+    engine: ollama
+    model: llama3.1
+    parameters:
+      base_url: http://localhost:11434
+    

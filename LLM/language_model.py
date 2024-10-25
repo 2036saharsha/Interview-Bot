@@ -5,8 +5,11 @@ from transformers import (
     pipeline,
     TextIteratorStreamer,
 )
+import asyncio
 import torch
 import ollama
+from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.streaming import StreamingHandler
 
 from LLM.chat import Chat
 from baseHandler import BaseHandler
@@ -44,6 +47,7 @@ class LanguageModelHandler(BaseHandler):
         chat_size=1,
         init_chat_role=None,
         init_chat_prompt="You are a helpful AI assistant.",
+        guard_config_path = "guard_rails_config/config.yml"
     ):
         self.device = device
         self.torch_dtype = getattr(torch, torch_dtype)
@@ -74,8 +78,15 @@ class LanguageModelHandler(BaseHandler):
                 )
             self.chat.init_chat({"role": init_chat_role, "content": init_chat_prompt})
         self.user_role = user_role
+        self.rails = self.load_guardrails(guard_config_path)
 
         self.warmup()
+
+    def load_guardrails(self, config_path):
+        config = RailsConfig.from_path(config_path)
+        rails = LLMRails(config)
+        logger.info("Guardrails loaded successfully.")
+        return rails
 
     def warmup(self):
         logger.info(f"Warming up {self.__class__.__name__}")
@@ -116,6 +127,7 @@ class LanguageModelHandler(BaseHandler):
             stream=True,
         )
         generated_text, printable_text = "", ""
+
         for new_text in stream:
             new_text = new_text['message']['content']
             generated_text += new_text
@@ -128,3 +140,4 @@ class LanguageModelHandler(BaseHandler):
         self.chat.append({"role": "assistant", "content": generated_text})
 
         yield (printable_text, language_code)
+        

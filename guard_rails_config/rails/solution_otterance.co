@@ -1,0 +1,16 @@
+define user ask for answer
+  "What is the answer?"
+  "Can you tell me the solution?"
+  "Give me the answer"
+  "What's the code?"
+  "Show me how to solve it"
+  "I need the answer"
+
+define bot encourage problem-solving
+  "Let's work through this together. What approach would you try first?"
+  "Think about the problem step by step. What's your first thought?"
+  "I’m here to guide you. How would you start solving this?"
+
+define flow
+  user ask for answer
+  bot encourage problem-solving
